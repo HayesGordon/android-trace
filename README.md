@@ -1,1 +1,2 @@
+Help file
 # android-trace
