@@ -50,6 +50,13 @@ function start() {
                 if (excludeMethodNames.indexOf(methodNameToHook) > -1){
                   return;
                 }
+                try {
+                  var catchFail = (classHandle.$init.overloads.length > 1);
+                  hookConstructors(classNameToHook);
+                } catch (err) {
+                  send({ type: "info", data: "No constructor to hook in class: " + classNameToHook });
+                  console.error(err);
+                }
                 if (!(classHandle[methodNameToHook].overloads.length > 1)){
                   hookMethod(classNameToHook, methodNameToHook);
                 } else {
@@ -161,6 +168,41 @@ function hookOverloadedMethod(classNameToHook, methodNameToHook){
           args: argTypes
         }
       });
+      console.error(err);
+    }
+  }
+}
+
+function hookConstructors(classNameToHook){
+  var constructorMethods = classHandle.$init.overloads;
+  for (var i in constructorMethods){
+    var argTypes = constructorMethods[i].argumentTypes.map(function(a) {return a.className;});
+    try{
+      send({
+        type: "constructorHooked",
+        data: {
+          methodType: "CONSTRUCTOR",
+          className: classNameToHook,
+          args: argTypes
+        }
+      });
+
+      classHandle.$init.overload.apply(this, argTypes).implementation = function() {
+
+        var args = Array.prototype.slice.call(arguments);
+        // send message on hook
+        send({
+          type: "constructorCalled",
+          data: {
+            methodType: "CONSTRUCTOR",
+            className: classNameToHook,
+            args: JSON.stringify(args)
+          }
+        });
+
+        return this.$init.apply(this, args);
+      }
+    } catch (err){
       console.error(err);
     }
   }
