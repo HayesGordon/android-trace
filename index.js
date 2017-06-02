@@ -33,7 +33,8 @@ const excludeMethods = program.excludeMethods;
 output.stateInformation({ type: 'info', data: 'Package Name: ' + packageName });
 output.stateInformation({ type: 'info', data: 'Filter: ' + filter});
 output.stateInformation({ type: 'info', data: 'Exclude Classes: ' + excludeClasses});
-output.stateInformation({ type: 'info', data: 'Exclude Methods:' + excludeMethods });
+output.stateInformation({ type: 'info', data: 'Exclude Methods: ' + excludeMethods });
+
 
 /*load agent*/
 co(function *() {
@@ -42,21 +43,29 @@ co(function *() {
   const session = yield device.attach(packageName);
   const script = yield session.createScript(scr);
 
-  // handle messages from the frida agent
-  script.events.listen('message', output.handleMessage);
 
   yield script.load();
   const api = yield script.getExports();
+
+  // handle messages from the frida agent
+  script.events.listen('message', output.handleMessage.bind(this, api));
 
   /*set agent fields*/
   yield api.setClassFilter(filter);
   yield api.setExcludeClassNames(excludeClasses);
   yield api.setExcludeMethodNames(excludeMethods);
 
-  yield api.runScript();
+  yield api.enumerateAndHookClasses();
+
+  // enumerateClasses();
+  setInterval(dumpClasses, 30000, api);
 
   output.stateInformation({ type: "info", data: "Script loaded" });
 })
 .catch(err => {
   console.error(err);
 });
+
+function dumpClasses(api){
+  api.enumerateAndDumpClasses()
+}
