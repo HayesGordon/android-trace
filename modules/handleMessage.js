@@ -20,6 +20,7 @@ function handleMessage(api,message){
     console.log(chalk_data(" CLASS ") + message.payload.data.className);
     console.log(chalk_data(" " + message.payload.data.methodType)+ " " + message.payload.data.methodName);
     console.log(chalk_data(" ARGUMENTS: ") + message.payload.data.args);
+    console.log(chalk_data(" RETURN: ") + message.payload.data.returnVal);
   } else if (message.payload.type === "constructorCalled"){
     console.log(" ------------------");
     console.log(chalk_dataAlternative(" CONSTRUCTOR ") + message.payload.data.className);

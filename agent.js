@@ -150,13 +150,15 @@ function hookConstructors(classNameToHook){
       classHandle.$init.overload.apply(this, argTypes).implementation = function() {
 
         var args = Array.prototype.slice.call(arguments);
+        var returnArgs= args + "";
+
         // send message on hook
         send({
           type: "constructorCalled",
           data: {
             methodType: "CONSTRUCTOR",
             className: classNameToHook,
-            args: JSON.stringify(args)
+            args: returnArgs
           }
         });
 
@@ -184,6 +186,8 @@ function hookMethod(classNameToHook, methodNameToHook){
 
     classHandle[methodNameToHook].implementation = function() {
       var args = Array.prototype.slice.call(arguments);
+      var retVal = this[methodNameToHook].apply(this, args);
+      var returnArgs= args + "";
       // send message on hook
       send({
         type: "methodCalled",
@@ -191,11 +195,12 @@ function hookMethod(classNameToHook, methodNameToHook){
           methodType: "METHOD",
           className: classNameToHook,
           methodName: methodNameToHook,
-          args: JSON.stringify(args)
+          args: returnArgs,
+          returnVal: "" + retVal
         }
       });
 
-      return this[methodNameToHook].apply(this, args);
+      return retVal;
     };
   }catch (err){
     send({
@@ -229,6 +234,9 @@ function hookOverloadedMethod(classNameToHook, methodNameToHook){
 
       classHandle[methodNameToHook].overload.apply(this, argTypes).implementation = function() {
         var args = Array.prototype.slice.call(arguments);
+        var retVal = this[methodNameToHook].apply(this, args);
+        var returnArgs = args + "";
+        console.log("findme:" + returnArgs);
         // send message on hook
         send({
           type: "methodCalled",
@@ -236,11 +244,12 @@ function hookOverloadedMethod(classNameToHook, methodNameToHook){
             methodType: "OVERLOADED METHOD",
             className: classNameToHook,
             methodName: methodNameToHook,
-            args: JSON.stringify(args)
+            args: returnArgs,
+            returnVal: "" + retVal
           }
         });
 
-        return this[methodNameToHook].apply(this, args);
+        return retVal;
       };
     } catch (err){
       send({
