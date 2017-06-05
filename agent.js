@@ -15,11 +15,11 @@ rpc.exports = {
   setExcludeMethodNames: function(filter) {
     excludeMethodNames = filter;
   },
-  enumerateAndHookClasses: function() {
-    startEnumerateAndHookClasses();
-  },
-  enumerateAndDumpClasses: function() {
-    startEnumerateAndDumpClasses();
+  // enumerateAndHookClasses: function() {
+  //   startEnumerateAndHookClasses();
+  // },
+  enumerateClasses: function() {
+    startEnumerateClasses();
   },
   providedClassesHook: function(providedClasses) {
     startProvidedClassesHook(providedClasses);
@@ -28,44 +28,44 @@ rpc.exports = {
 
 /******CLASS MANAGEMENT******/
 
-function startEnumerateAndHookClasses() {
-  /* Check if a Java/Dalvik/ART VM is available */
-  if (Java.available) {
-    Java.perform(function(){
-      try{
-        Java.enumerateLoadedClasses({
-          onMatch: function(classNameToHook) {
-            send({ type: "enumerateClasses", data: classNameToHook, enumerationDump: false });
-            hookClass(classNameToHook);
-          },
-          /* enumerateLoadedClasses finished */
-          onComplete: function() {
-            send({ type: "info", data: "Finished enumerating classes and initialising hook" });
-          }
-        });
-      } catch (err) {
-        send({ type: "errorGeneric", data: "Java.perform error" });
-        console.error(err);
-      }
-    });
-    /* if a Java/Dalvik/ART VM is not available */
-  } else {
-    send({ type: "errorGeneric", data: "Java.available error" });
-  }
-}
+// function startEnumerateAndHookClasses() {
+//   /* Check if a Java/Dalvik/ART VM is available */
+//   if (Java.available) {
+//     Java.perform(function(){
+//       try{
+//         Java.enumerateLoadedClasses({
+//           onMatch: function(classNameToHook) {
+//             send({ type: "enumerateClasses", data: classNameToHook });
+//             hookClass(classNameToHook);
+//           },
+//           /* enumerateLoadedClasses finished */
+//           onComplete: function() {
+//             send({ type: "info", data: "Finished enumerating classes and initialising hook" });
+//           }
+//         });
+//       } catch (err) {
+//         send({ type: "errorGeneric", data: "Java.perform error" });
+//         console.error(err);
+//       }
+//     });
+//     /* if a Java/Dalvik/ART VM is not available */
+//   } else {
+//     send({ type: "errorGeneric", data: "Java.available error" });
+//   }
+// }
 
-function startEnumerateAndDumpClasses() {
+function startEnumerateClasses() {
   /* Check if a Java/Dalvik/ART VM is available */
   if (Java.available) {
     Java.perform(function(){
       try{
         Java.enumerateLoadedClasses({
           onMatch: function(classNameToHook) {
-            send({ type: "enumerateClasses", data: classNameToHook, enumerationDump: true });
+            send({ type: "enumerateClasses", data: classNameToHook });
           },
           /* enumerateLoadedClasses finished */
           onComplete: function() {
-            send({ type: "enumerateClassesDone", data: " Finished enumerating and dumping classes" });
+            send({ type: "enumerateClassesDone", data: " Finished enumerating classes" });
           }
         });
       } catch (err) {

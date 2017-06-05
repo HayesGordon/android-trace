@@ -4,7 +4,7 @@ const co = require('co');
 const frida = require('frida');
 const load = require('frida-load');
 const program = require('commander');
-const output = require('./modules/output');
+const output = require('./modules/handleMessage');
 
 
 /*parse command line options*/
@@ -55,7 +55,8 @@ co(function *() {
   yield api.setExcludeClassNames(excludeClasses);
   yield api.setExcludeMethodNames(excludeMethods);
 
-  yield api.enumerateAndHookClasses();
+  // yield api.enumerateAndHookClasses();
+  yield api.enumerateClasses()
 
   // enumerateClasses();
   setInterval(dumpClasses, 30000, api);
@@ -67,5 +68,5 @@ co(function *() {
 });
 
 function dumpClasses(api){
-  api.enumerateAndDumpClasses()
+  api.enumerateClasses()
 }

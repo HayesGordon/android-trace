@@ -36,6 +36,11 @@ function handleMessage(api,message){
     console.log(chalk_info(" " + message.payload.data.methodType)+ " " + message.payload.data.methodName);
     console.log(chalk_info(" ARGUMENT TYPES: ") + message.payload.data.args);
   }
+  else if (message.payload.type === "enumerateClasses"){
+      handleEnumerateClasses(message);
+    } else if (message.payload.type === "enumerateClassesDone"){
+      handleEnumerateClassesDone(message.payload.data, api);
+    }
   else if (message.payload.type === "info"){
     console.log("\n " + chalk_state(message.payload.data));
   }
@@ -47,11 +52,6 @@ function handleMessage(api,message){
     console.log(chalk_error(" CLASS ") + message.payload.data.className);
     console.log(chalk_error(" " + message.payload.data.methodType)+ " " + message.payload.data.methodName);
     console.log(chalk_error(" ARGUMENT TYPES: ") + message.payload.data.args);
-  }
-  else if (message.payload.type === "enumerateClasses"){
-    handleEnumerateClasses(message);
-  } else if (message.payload.type === "enumerateClassesDone"){
-    handleEnumerateClassesDone(message.payload.data, api);
   }
 }
 
@@ -65,15 +65,13 @@ function handleEnumerateClasses(message){
   var className = message.payload.data
   if (!(enumeratedClasses.indexOf(className) > -1)){
     enumeratedClasses.push(className);
-    if (message.payload.enumerationDump) {
-      console.log(" ENUMERATED CLASS: " + chalk_infoAlternative(className));
-      newClasses.push(className);
-    }
+    newClasses.push(className)
   }
 }
 
 function handleEnumerateClassesDone(message, api){
-  console.log(chalk_info(message));
+  var messageNew =  message + ": disovered " + newClasses.length + " classes"
+  console.log("\n" + chalk_state(messageNew));
   if(newClasses.length > 0){
     co(function *() {
       yield api.providedClassesHook(newClasses);
