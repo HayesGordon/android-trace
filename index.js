@@ -26,7 +26,12 @@ if (!process.argv.slice(2).length) {
 }
 
 const packageName = program.packageName;
-const filter = program.filter;
+let filter = "";
+if(program.filter){
+  filter = program.filter;
+} else {
+  filter = packageName;
+}
 //TODO filter by exact class name
 const excludeClasses = program.excludeClasses;
 const excludeMethods = program.excludeMethods;

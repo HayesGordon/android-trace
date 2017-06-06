@@ -236,7 +236,6 @@ function hookOverloadedMethod(classNameToHook, methodNameToHook){
         var args = Array.prototype.slice.call(arguments);
         var retVal = this[methodNameToHook].apply(this, args);
         var returnArgs = args + "";
-        console.log("findme:" + returnArgs);
         // send message on hook
         send({
           type: "methodCalled",
@@ -248,7 +247,6 @@ function hookOverloadedMethod(classNameToHook, methodNameToHook){
             returnVal: "" + retVal
           }
         });
-
         return retVal;
       };
     } catch (err){
