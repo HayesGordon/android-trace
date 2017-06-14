@@ -5,6 +5,7 @@ var filterClassNames = "";
 var excludeClassNames = [];
 var excludeMethodNames = [];
 
+
 rpc.exports = {
   setClassFilter: function(filter) {
     filterClassNames = filter;
@@ -23,7 +24,25 @@ rpc.exports = {
   },
   providedClassesHook: function(providedClasses) {
     startProvidedClassesHook(providedClasses);
+  },
+  doNotClose: function(){
+    startDoNotClose();
   }
+}
+
+
+function startDoNotClose(){
+  Java.perform(function () {
+      send("Placing Java hooks...");
+
+      var sys = Java.use("java.lang.System");
+      sys.exit.overload("int").implementation = function(var_0) {
+          send("java.lang.System.exit(I)V  // We avoid exiting the application  :)");
+      };
+
+      send("Done Java hooks installed.");
+      console.log("done")
+  });
 }
 
 /******CLASS MANAGEMENT******/
@@ -188,6 +207,7 @@ function hookMethod(classNameToHook, methodNameToHook){
       var args = Array.prototype.slice.call(arguments);
       var retVal = this[methodNameToHook].apply(this, args);
       var returnArgs= args + "";
+
       // send message on hook
       send({
         type: "methodCalled",
@@ -247,6 +267,7 @@ function hookOverloadedMethod(classNameToHook, methodNameToHook){
             returnVal: "" + retVal
           }
         });
+        // console.log("findme: " + retVal.getRequestMethod());
         return retVal;
       };
     } catch (err){
