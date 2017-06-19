@@ -267,7 +267,6 @@ function hookOverloadedMethod(classNameToHook, methodNameToHook){
             returnVal: "" + retVal
           }
         });
-        // console.log("findme: " + retVal.getRequestMethod());
         return retVal;
       };
     } catch (err){

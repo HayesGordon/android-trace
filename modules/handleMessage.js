@@ -1,5 +1,6 @@
 const chalk = require('chalk');
 const co = require('co');
+const fs = require('fs');
 
 
 /*chalk themes*/
@@ -79,7 +80,24 @@ function handleEnumerateClassesDone(message, api){
     });
   }
   newClasses = [];
+  outputClassesToFile();
 }
+
+function outputClassesToFile(){
+  fs.writeFile(
+
+    './classes.json',
+
+    JSON.stringify(enumeratedClasses),
+
+    function (err) {
+        if (err) {
+            console.error('');
+        }
+    }
+);
+}
+
 
 module.exports = {
   handleMessage: handleMessage,
