@@ -2,7 +2,7 @@
 [Frida-node](https://github.com/frida/frida-node) cli tool for automating Android class and method tracing.
 ### Installation
 android-trace requires the following:
-* [Node.js](https://nodejs.org/) v4+ to run, including Node package manager NPM.
+* [Node.js](https://nodejs.org/) v4+ to run, including node package manager NPM.
 * [Android Platform Tools](https://developer.android.com/studio/releases/platform-tools.html), specifically ADB (Android Debug Bridge). ADB must be added to the PATH environment.
 
 Installing Node for Debian and Ubuntu based Linux distributions:
@@ -36,9 +36,9 @@ $ node index.js -n {package name} -f {filter}
 ```
 Specify -E along with a comma separated list of classes to exclude (no spaces). Provide the full package and class path to ensure only the specified classes get excluded.
 ```sh
-$ node index.js -n {package name} -E com.androidtrace.testapp.MyClass,ClassesContaingString
+$ node index.js -n {package name} -E com.androidtrace.testapp.MyClass,ClassesContainingString
 ```
-Specify -e along with a comma separated list of methods to exclude. Note that the script will exclude all methods matching the provided string.
+Specify -e along with a comma separated list of methods to exclude. Note that the script will exclude all methods matching the provided strings.
 ```sh
-$ node index.js -n {package name} -E Method1,MethodContaingString
+$ node index.js -n {package name} -E Method1,MethodContainingString
 ```
