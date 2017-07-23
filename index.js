@@ -15,7 +15,7 @@ function list(val) {
 program
   .version('1.0.0')
   .option('-n, --package-name <n>', 'android application package name')
-  .option('-f, --filter <n>', 'specify filter for classes to hook, e.g. part of the package name')
+  .option('-f, --filter <n>', 'specify filter for classes to hook, e.g. part of the package name or a specific class. Leave empty to hook all loaded classes')
   .option('-E, --exclude-classes <items>', 'comma seperated list of class names to exclude, e.g. -E ClassName1,ClassName2', list, [])
   .option('-e, --exclude-methods <items>', 'comma seperated list of method names to exclude, e.g. -e methodName1,methodName2', list, [])
   .parse(process.argv);
@@ -26,7 +26,9 @@ if (!process.argv.slice(2).length) {
 }
 
 const packageName = program.packageName;
-const filter = program.filter;
+let filter = ""
+if (program.filter)
+  filter = program.filter;
 //TODO filter by exact class name
 const excludeClasses = program.excludeClasses;
 const excludeMethods = program.excludeMethods;
