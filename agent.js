@@ -1,13 +1,13 @@
 "use strict";
 
-var classHandle = {};
-var filterClassNames = "";
-var excludeClassNames = [];
-var excludeMethodNames = [];
+let classHandle = {};
+let methodFilter;
+let excludeClassNames = [];
+let excludeMethodNames = [];
 
 rpc.exports = {
-  setClassFilter: function(filter) {
-    filterClassNames = filter;
+  setMethodFilter: function (filter) {
+    methodFilter = new RegExp(filter);
   },
   setExcludeClassNames: function(filter) {
     excludeClassNames = filter;
@@ -15,9 +15,6 @@ rpc.exports = {
   setExcludeMethodNames: function(filter) {
     excludeMethodNames = filter;
   },
-  // enumerateAndHookClasses: function() {
-  //   startEnumerateAndHookClasses();
-  // },
   enumerateClasses: function() {
     startEnumerateClasses();
   },
@@ -26,36 +23,7 @@ rpc.exports = {
   }
 }
 
-/******CLASS MANAGEMENT******/
-
-// function startEnumerateAndHookClasses() {
-//   /* Check if a Java/Dalvik/ART VM is available */
-//   if (Java.available) {
-//     Java.perform(function(){
-//       try{
-//         Java.enumerateLoadedClasses({
-//           onMatch: function(classNameToHook) {
-//             send({ type: "enumerateClasses", data: classNameToHook });
-//             hookClass(classNameToHook);
-//           },
-//           /* enumerateLoadedClasses finished */
-//           onComplete: function() {
-//             send({ type: "info", data: "Finished enumerating classes and initialising hook" });
-//           }
-//         });
-//       } catch (err) {
-//         send({ type: "errorGeneric", data: "Java.perform error" });
-//         console.error(err);
-//       }
-//     });
-//     /* if a Java/Dalvik/ART VM is not available */
-//   } else {
-//     send({ type: "errorGeneric", data: "Java.available error" });
-//   }
-// }
-
 function startEnumerateClasses() {
-  /* Check if a Java/Dalvik/ART VM is available */
   if (Java.available) {
     Java.perform(function(){
       try{
@@ -63,9 +31,8 @@ function startEnumerateClasses() {
           onMatch: function(classNameToHook) {
             send({ type: "enumerateClasses", data: classNameToHook });
           },
-          /* enumerateLoadedClasses finished */
           onComplete: function() {
-            send({ type: "enumerateClassesDone", data: " Finished enumerating classes" });
+            send({ type: "enumerateClassesDone"});
           }
         });
       } catch (err) {
@@ -73,14 +40,14 @@ function startEnumerateClasses() {
         console.error(err);
       }
     });
-    /* if a Java/Dalvik/ART VM is not available */
   } else {
     send({ type: "errorGeneric", data: "Java.available error" });
   }
 }
 
 function startProvidedClassesHook(providedClasss){
-  Java.perform(function(){
+  //TODO performNow or perform?
+  Java.performNow(function(){
       providedClasss.map(function(classNameToHook){
         hookClass(classNameToHook);
     });
@@ -91,48 +58,52 @@ function startProvidedClassesHook(providedClasss){
 /******CLASS HOOK FUNCTION******/
 
 function hookClass(classNameToHook){
-  var shouldHookClass = true;
-  excludeClassNames.map(function(filter){
-    if (classNameToHook.indexOf(filter) >= 0) {
-      shouldHookClass = false;
-    }
-  });
-  if ((classNameToHook.indexOf(filterClassNames) >= 0) && shouldHookClass){
-    try {
-      classHandle = Java.use(classNameToHook);
-    } catch (err) {
-      send({ type: "errorGeneric", data: "Java.use error in class: " +
-        classNameToHook + " - skipping class" });
-      console.error(err);
+  //TODO implement exclude and do it better - this can be done in the agent handler
+  // var shouldHookClass = true;
+  // excludeClassNames.map(function(filter){
+  //   if (classNameToHook.indexOf(filter) >= 0) {
+  //     shouldHookClass = false;
+  //   }
+  // });
+  try {
+    classHandle = Java.use(classNameToHook);
+  } catch (err) {
+    send({ type: "errorGeneric", data: "Java.use error in class: " +
+      classNameToHook + " - skipping class" });
+    console.error(err);
+    return;
+  }
+
+  var allPropertyNames = getAllPropertyNames(classHandle);
+  var allFunctionNames = getAllFunctionNames(allPropertyNames);
+
+  allFunctionNames.map(function(methodNameToHook){
+    if(!methodFilter.test(methodNameToHook)){
       return;
     }
-
-    var allPropertyNames = getAllPropertyNames(classHandle);
-    var allFunctionNames = getAllFunctionNames(allPropertyNames);
-
-    allFunctionNames.map(function(methodNameToHook){
-      if (excludeMethodNames.indexOf(methodNameToHook) > -1){
-        return;
-      }
-      try {
-        var catchFail = (classHandle.$init.overloads.length > 1);
-        hookConstructors(classNameToHook);
-      } catch (err) {
-        send({ type: "info", data: "No constructor to hook in class: " + classNameToHook });
-        console.error(err);
-      }
-      if (!(classHandle[methodNameToHook].overloads.length > 1)){
-        hookMethod(classNameToHook, methodNameToHook);
-      } else {
-        hookOverloadedMethod(classNameToHook, methodNameToHook);
-      }
-    });
-  }
+    //TODO do this better - regex or exact method name search
+    if (excludeMethodNames.indexOf(methodNameToHook) > -1){
+      return;
+    }
+    try {
+      var catchFail = (classHandle.$init.overloads.length > 1);
+      hookConstructors(classNameToHook);
+    } catch (err) {
+      send({ type: "info", data: "No constructor to hook in class: " + classNameToHook });
+      console.error(err);
+    }
+    if (!(classHandle[methodNameToHook].overloads.length > 1)){
+      hookMethod(classNameToHook, methodNameToHook);
+    } else {
+      hookOverloadedMethod(classNameToHook, methodNameToHook);
+    }
+  });
 }
 
 
-/******METHOD AND CONSTRUCTOR HOOK FUNCTIONS******/
-
+/*
+METHOD AND CONSTRUCTOR HOOK FUNCTIONS
+*/
 function hookConstructors(classNameToHook){
   var constructorMethods = classHandle.$init.overloads;
   for (var i in constructorMethods){
@@ -257,9 +228,13 @@ function hookOverloadedMethod(classNameToHook, methodNameToHook){
   }
 }
 
-/******CUSTOM FUNCTIONS******/
 
-/* return all the property names for an object by walking up the prototype chain
+/*
+CUSTOM FUNCTIONS
+*/
+
+/*
+return all the property names for an object by walking up the prototype chain
 enum/nonenum, self/inherited..
 */
 function getAllPropertyNames( obj ) {
@@ -273,6 +248,7 @@ function getAllPropertyNames( obj ) {
 }
 
 /*cheap hack to only get the function names of the intended class*/
+//TODO do it better I guess
 function getAllFunctionNames( propertyNames ) {
   var begin_pos = propertyNames.indexOf("$className");
   var end_pos = propertyNames.indexOf("constructor", begin_pos);
