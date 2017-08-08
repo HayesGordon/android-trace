@@ -26,7 +26,7 @@ program
   .option('-e, --exclude-methods <items>', 'comma seperated list of method names to exclude, e.g. -e methodName1,methodName2', list, [])
   .option('-l, --load-classes <n>', 'load classes specified in provided file')
   .option('-d, --discover', 'do not perform any tracing, only enumerate classes at run-time and dump to file - filters/exludes apply')
-  // .option('-t, --time', 'specify the time in seconds between each class enumeration call, default is 30 seconds')
+  .option('-t, --time <seconds>', 'specify the time in seconds between each class enumeration call, default is 30 seconds', parseInt)
   // .option('-o, --out', 'specify output file for enumerated classes, default is "classes.json"')
   .option('-r, --running-processes', 'list running processes')
   .parse(process.argv);
@@ -42,6 +42,7 @@ let host = "";
 let filterClass = "";
 let filterMethod = "";
 let file_name = "";
+let time = 30000;
 if (program.host)
   host = program.host;
 if (program.filterClass)
@@ -50,6 +51,13 @@ if (program.filterMethod)
   filterMethod = program.filterMethod;
 if (program.loadClasses)
   file_name = program.loadClasses;
+if (program.time){
+  time = program.time * 1000;
+  if (time < 5000) {
+    console.error("\nTime '-t' can not be less than 5 seconds\n");
+    process.exit(1);
+  }
+}
 
 
 //TODO filter by exact class name
@@ -62,10 +70,13 @@ const exclude_methods = program.excludeMethods;
 /*
 PRINT STATE INFORMATION
 */
-agent_handler.handler.printStateInformation({ type: 'info', data: 'Package Name: ' + package_name });
-agent_handler.handler.printStateInformation({ type: 'info', data: 'Filter: ' + filterClass});
-agent_handler.handler.printStateInformation({ type: 'info', data: 'Exclude Classes: ' + exclude_classes});
-agent_handler.handler.printStateInformation({ type: 'info', data: 'Exclude Methods: ' + exclude_methods });
+agent_handler.handler.printStateInformation({ type: 'info', data: 'Package name: ' + package_name });
+agent_handler.handler.printStateInformation({ type: 'info', data: 'Class filter: ' + filterClass});
+agent_handler.handler.printStateInformation({ type: 'info', data: 'Method filter: ' + filterMethod});
+agent_handler.handler.printStateInformation({ type: 'info', data: 'Exclude classes: ' + exclude_classes});
+agent_handler.handler.printStateInformation({ type: 'info', data: 'Exclude methods: ' + exclude_methods });
+agent_handler.handler.printStateInformation({ type: 'info', data: 'Provided classes file: ' + file_name });
+agent_handler.handler.printStateInformation({ type: 'info', data: 'Time between enumeration: ' + time/1000 + ' seconds' });
 
 
 /*
@@ -146,7 +157,7 @@ co(function *() {
   */
   if (program.discover){
     agent_handler.handler.setEnumerateOnly();
-    agent_handler.handler.printStateInformation({ type: 'info', data: 'Enumerating classes every 30 seconds' });
+    agent_handler.handler.printStateInformation({ type: 'info', data: 'Enumerating classes every ' + time/1000 + ' seconds' });
 
   }
 
@@ -171,7 +182,7 @@ co(function *() {
     /*enumerate and hook classes at runtime*/
     yield agent_api.enumerateClasses()
     /*enumerate classes every fixed interval to discover new loaded classes*/
-    setInterval(enumClasses, 30000, agent_api);
+    setInterval(enumClasses, time, agent_api);
   }
 
 
