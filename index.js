@@ -23,7 +23,7 @@ program
   .option('-f, --filter-method <n>', 'specify regex filter for methods to include in trace')
   .option('-E, --exclude-classes <items>', 'comma seperated list of class names to exclude, e.g. -E ClassName1,ClassName2', list, [])
   .option('-e, --exclude-methods <items>', 'comma seperated list of method names to exclude, e.g. -e methodName1,methodName2', list, [])
-  // .option('-l, --load-classes <items>', 'load classes specified in provided file')
+  .option('-l, --load-classes <n>', 'load classes specified in provided file')
   // .option('-d, --discover', 'do not perform any tracing, only enumerate classes at run-time and dump to file')
   // .option('-t, --time', 'specify the time in seconds between each class enumeration call')
   // .option('-o, --out', 'specify output file for enumerated classes, default is "classes.json"')
@@ -38,12 +38,15 @@ if (!process.argv.slice(2).length) {
 let host = "";
 let filterClass = "";
 let filterMethod = "";
+let file_name = "";
 if (program.host)
   host = program.host;
 if (program.filterClass)
   filterClass = program.filterClass;
 if (program.filterMethod)
   filterMethod = program.filterMethod;
+if (program.loadClasses)
+  file_name = program.loadClasses;
 
 //TODO filter by exact class name
 const package_name = program.packageName;
@@ -103,7 +106,7 @@ co(function *() {
   /*set agent handler fields*/
   agent_handler.handler.setAgentApi(agent_api);
   agent_handler.handler.setClassFilter(filterClass);
-  /*listen for messages from agent - call agent handler*/
+  /*create event listener -> call agent message handler*/
   script.events.listen('message', agent_handler.handler.handleAgentMessage);
 
   /*set agent fields*/
@@ -111,10 +114,16 @@ co(function *() {
   yield agent_api.setExcludeClassNames(exclude_classes);
   yield agent_api.setExcludeMethodNames(exclude_methods);
 
-  yield agent_api.enumerateClasses()
 
-  /*enumerate classes every fixed interval to discover new loaded classes*/
-  setInterval(enumClasses, 30000, agent_api);
+  /*hook classes provided in file*/
+  if (program.loadClasses){
+    agent_handler.handler.traceClassesFromFile(file_name);
+  } else {
+    /*enumerate and hook classes*/
+    yield agent_api.enumerateClasses()
+    /*enumerate classes every fixed interval to discover new loaded classes*/
+    setInterval(enumClasses, 30000, agent_api);
+  }
 
   /*display message to indicate that the script has finished loading*/
   agent_handler.handler.printStateInformation({ type: "info", data: "Script loaded" });
@@ -131,6 +140,6 @@ function enumClasses(agent_api){
 /*function to pretty print running processes*/
 function printRunningProcesses(processes){
   processes.map(function(element){
-    console.log(" pid: " + element.pid + " , " + "name: " + element.name);
+    console.log(" pid: " + element.pid + " ; " + "name: " + element.name);
   })
 }

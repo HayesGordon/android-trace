@@ -74,28 +74,37 @@ function hookClass(classNameToHook){
     return;
   }
 
+  /*HOOK CONSTRUCTORS*/
+  try {
+    if (classHandle.$init.overloads.length > 0) {
+      hookConstructors(classNameToHook);
+    } else {
+      send({ type: "info", data: "No constructor to hook in class: " + classNameToHook });
+    }
+  } catch (err) {
+    console.error(err);
+  }
+
+  /*HOOK FUNCTIONS*/
   var allPropertyNames = getAllPropertyNames(classHandle);
   var allFunctionNames = getAllFunctionNames(allPropertyNames);
 
   allFunctionNames.map(function(methodNameToHook){
-    if(!methodFilter.test(methodNameToHook)){
-      return;
-    }
-    //TODO do this better - regex or exact method name search
-    if (excludeMethodNames.indexOf(methodNameToHook) > -1){
-      return;
-    }
-    try {
-      var catchFail = (classHandle.$init.overloads.length > 1);
-      hookConstructors(classNameToHook);
+    // if(!methodFilter.test(methodNameToHook)){
+    //   return;
+    // }
+    // //TODO do this better - regex or exact method name search
+    // if (excludeMethodNames.indexOf(methodNameToHook) > -1){
+    //   return;
+    // }
+    try{
+      if (!(classHandle[methodNameToHook].overloads.length > 1)){
+        hookMethod(classNameToHook, methodNameToHook);
+      } else {
+        hookOverloadedMethod(classNameToHook, methodNameToHook);
+      }
     } catch (err) {
-      send({ type: "info", data: "No constructor to hook in class: " + classNameToHook });
       console.error(err);
-    }
-    if (!(classHandle[methodNameToHook].overloads.length > 1)){
-      hookMethod(classNameToHook, methodNameToHook);
-    } else {
-      hookOverloadedMethod(classNameToHook, methodNameToHook);
     }
   });
 }
@@ -127,7 +136,9 @@ function hookConstructors(classNameToHook){
           data: {
             methodType: "CONSTRUCTOR",
             className: classNameToHook,
-            args: JSON.stringify(args)
+            // args: JSON.stringify(args)
+            argTypes: argTypes,
+            args: args + ""
           }
         });
 
@@ -155,6 +166,7 @@ function hookMethod(classNameToHook, methodNameToHook){
 
     classHandle[methodNameToHook].implementation = function() {
       var args = Array.prototype.slice.call(arguments);
+      var retVal = this[methodNameToHook].apply(this, args);
       // send message on hook
       send({
         type: "methodCalled",
@@ -162,11 +174,14 @@ function hookMethod(classNameToHook, methodNameToHook){
           methodType: "METHOD",
           className: classNameToHook,
           methodName: methodNameToHook,
-          args: JSON.stringify(args)
+          argTypes: argTypes,
+          // args: JSON.stringify(args)
+          args: args + "",
+          ret: retVal + ""
         }
       });
 
-      return this[methodNameToHook].apply(this, args);
+      return retVal;
     };
   }catch (err){
     send({
@@ -199,7 +214,9 @@ function hookOverloadedMethod(classNameToHook, methodNameToHook){
       });
 
       classHandle[methodNameToHook].overload.apply(this, argTypes).implementation = function() {
+        
         var args = Array.prototype.slice.call(arguments);
+        var retVal = this[methodNameToHook].apply(this, args);
         // send message on hook
         send({
           type: "methodCalled",
@@ -207,11 +224,16 @@ function hookOverloadedMethod(classNameToHook, methodNameToHook){
             methodType: "OVERLOADED METHOD",
             className: classNameToHook,
             methodName: methodNameToHook,
-            args: JSON.stringify(args)
+            // argTypes: argTypes,
+            // args: JSON.stringify(args)
+            args: args + "",
+            ret: retVal + ""
+
           }
         });
 
-        return this[methodNameToHook].apply(this, args);
+        // return this[methodNameToHook].apply(this, args);
+        return retVal;
       };
     } catch (err){
       send({
