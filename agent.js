@@ -90,13 +90,13 @@ function hookClass(classNameToHook){
   var allFunctionNames = getAllFunctionNames(allPropertyNames);
 
   allFunctionNames.map(function(methodNameToHook){
-    // if(!methodFilter.test(methodNameToHook)){
-    //   return;
-    // }
-    // //TODO do this better - regex or exact method name search
-    // if (excludeMethodNames.indexOf(methodNameToHook) > -1){
-    //   return;
-    // }
+    if(!methodFilter.test(methodNameToHook)){
+      return;
+    }
+    //TODO do this better - regex or exact method name search
+    if (excludeMethodNames.indexOf(methodNameToHook) > -1){
+      return;
+    }
     try{
       if (!(classHandle[methodNameToHook].overloads.length > 1)){
         hookMethod(classNameToHook, methodNameToHook);

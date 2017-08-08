@@ -18,9 +18,9 @@ handler = (function(){
   LOCAL VARIABLES
   */
   let enumeratedClasses = {}
-  let enumeratedClassesDump = []
+  let classes_that_match_filter = []
   let newClassesToHook = [];
-  let initialEnum = true;
+  let enumerateOnly = false;
   let classFilter;
   let agent_api = {};
 
@@ -28,21 +28,22 @@ handler = (function(){
   LOCAL FUNCTIONS
   */
 
-  function handleEnumerateClasses(className){
-    if(!enumeratedClasses[className]){
-      enumeratedClasses[className] = true; // object for searching
-      enumeratedClassesDump.push(className); // array for dumping to discovered file
-      if (classFilter.test(className)){
-        newClassesToHook.push(className); // new classes discovered that need to be hooked when enumerate classes is finished
+  function handleEnumerateClasses(class_name){
+    if(!enumeratedClasses[class_name]){
+      enumeratedClasses[class_name] = true; // object for searching
+      if (classFilter.test(class_name)){
+        classes_that_match_filter.push(class_name); // array for dumping to discovered classes file
+        newClassesToHook.push(class_name); // new classes discovered that need to be hooked when enumerate classes is finished
       }
 
     }
   }
 
   function handleEnumerateClassesDone(){
-    let message =  " Finished enumerating classes: disovered " + newClassesToHook.length + " classes";
+    let message =  " Finished enumerating classes: discovered " + newClassesToHook.length + " classes";
     console.log("\n" + chalk_state(message));
-    if(newClassesToHook.length > 0){
+    /*if new classes to be hooked are discovered, and the user is performing tracing*/
+    if(newClassesToHook.length > 0 && !enumerateOnly){
       // co(function *() {
       //   yield agent_api.providedClassesHook(newClassesToHook);
       // });
@@ -53,7 +54,7 @@ handler = (function(){
   }
 
   function outputClassesToFile(){
-    fs.writeFile('./classes.json', JSON.stringify(enumeratedClassesDump),
+    fs.writeFile('./classes.json', JSON.stringify(classes_that_match_filter),
       function (err) {
           if (err) {
               console.error(err);
@@ -87,6 +88,10 @@ handler = (function(){
     classFilter = new RegExp(filterVal);
   }
 
+  function setEnumerateOnly() {
+    enumerateOnly = true;
+  }
+
   function printStateInformation(message){
     if (message.type === "info") {
       console.log("\n " + chalk_state(message.data));
@@ -103,7 +108,7 @@ handler = (function(){
     });
   }  
 
-  function handleAgentMessage(message){
+  function agentMessageHandler(message){
     if ("undefined" !== typeof message.payload){
       switch(message.payload.type) {
         case "enumerateClasses":
@@ -160,10 +165,11 @@ handler = (function(){
   */
 
   return {
-    handleAgentMessage: handleAgentMessage,
+    agentMessageHandler: agentMessageHandler,
     printStateInformation: printStateInformation,
     setAgentApi: setAgentApi,
     setClassFilter: setClassFilter,
+    setEnumerateOnly: setEnumerateOnly,
     traceClassesFromFile: traceClassesFromFile
   }
 
