@@ -1,19 +1,18 @@
 "use strict";
 
 let classHandle = {};
-let methodFilter;
-let excludeClassNames = [];
-let excludeMethodNames = [];
+let method_filter;
+let method_exclude;
+let method_exclude_set = false;
 
 rpc.exports = {
   setMethodFilter: function (filter) {
-    methodFilter = new RegExp(filter);
+    method_filter = new RegExp(filter);
   },
-  setExcludeClassNames: function(filter) {
-    excludeClassNames = filter;
-  },
-  setExcludeMethodNames: function(filter) {
-    excludeMethodNames = filter;
+  setMethodExlude: function(filter) {
+    if (filter)
+      method_exclude_set = true;
+    method_exclude = new RegExp(filter);
   },
   enumerateClasses: function() {
     startEnumerateClasses();
@@ -28,11 +27,10 @@ function startEnumerateClasses() {
     Java.perform(function(){
       try{
         Java.enumerateLoadedClasses({
-          onMatch: function(classNameToHook) {
-            send({ type: "enumerateClasses", data: classNameToHook });
+          onMatch: function(class_discovered) {
+            send({ type: "class_discovered", data: class_discovered });
           },
           onComplete: function() {
-            send({ type: "enumerateClassesDone"});
           }
         });
       } catch (err) {
@@ -58,13 +56,7 @@ function startProvidedClassesHook(providedClasss){
 /******CLASS HOOK FUNCTION******/
 
 function hookClass(classNameToHook){
-  //TODO implement exclude and do it better - this can be done in the agent handler
-  // var shouldHookClass = true;
-  // excludeClassNames.map(function(filter){
-  //   if (classNameToHook.indexOf(filter) >= 0) {
-  //     shouldHookClass = false;
-  //   }
-  // });
+
   try {
     classHandle = Java.use(classNameToHook);
   } catch (err) {
@@ -90,22 +82,22 @@ function hookClass(classNameToHook){
   var allFunctionNames = getAllFunctionNames(allPropertyNames);
 
   allFunctionNames.map(function(methodNameToHook){
-    if(!methodFilter.test(methodNameToHook)){
+    /*return if method name matches user exlcude regex*/
+    if(method_exclude_set && method_exclude.test(methodNameToHook)){
       return;
     }
-    //TODO do this better - regex or exact method name search
-    if (excludeMethodNames.indexOf(methodNameToHook) > -1){
-      return;
-    }
-    try{
-      if (!(classHandle[methodNameToHook].overloads.length > 1)){
-        hookMethod(classNameToHook, methodNameToHook);
-      } else {
-        hookOverloadedMethod(classNameToHook, methodNameToHook);
+    /*perform hook if method name matches user filter regex*/
+    if(method_filter.test(methodNameToHook)){
+      try{
+        if (!(classHandle[methodNameToHook].overloads.length > 1)){
+          hookMethod(classNameToHook, methodNameToHook);
+        } else {
+          hookOverloadedMethod(classNameToHook, methodNameToHook);
+        }
+      } catch (err) {
+        console.error(err);
       }
-    } catch (err) {
-      console.error(err);
-    }
+  }
   });
 }
 
@@ -214,7 +206,7 @@ function hookOverloadedMethod(classNameToHook, methodNameToHook){
       });
 
       classHandle[methodNameToHook].overload.apply(this, argTypes).implementation = function() {
-        
+
         var args = Array.prototype.slice.call(arguments);
         var retVal = this[methodNameToHook].apply(this, args);
         // send message on hook
