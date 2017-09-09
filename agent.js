@@ -1,23 +1,19 @@
 "use strict";
 
-var classHandle = {};
-var filterClassNames = "";
-var excludeClassNames = [];
-var excludeMethodNames = [];
+let classHandle = {};
+let method_filter;
+let method_exclude;
+let method_exclude_set = false;
 
 rpc.exports = {
-  setClassFilter: function(filter) {
-    filterClassNames = filter;
+  setMethodFilter: function (filter) {
+    method_filter = new RegExp(filter);
   },
-  setExcludeClassNames: function(filter) {
-    excludeClassNames = filter;
+  setMethodExlude: function(filter) {
+    if (filter)
+      method_exclude_set = true;
+    method_exclude = new RegExp(filter);
   },
-  setExcludeMethodNames: function(filter) {
-    excludeMethodNames = filter;
-  },
-  // enumerateAndHookClasses: function() {
-  //   startEnumerateAndHookClasses();
-  // },
   enumerateClasses: function() {
     startEnumerateClasses();
   },
@@ -26,46 +22,15 @@ rpc.exports = {
   }
 }
 
-/******CLASS MANAGEMENT******/
-
-// function startEnumerateAndHookClasses() {
-//   /* Check if a Java/Dalvik/ART VM is available */
-//   if (Java.available) {
-//     Java.perform(function(){
-//       try{
-//         Java.enumerateLoadedClasses({
-//           onMatch: function(classNameToHook) {
-//             send({ type: "enumerateClasses", data: classNameToHook });
-//             hookClass(classNameToHook);
-//           },
-//           /* enumerateLoadedClasses finished */
-//           onComplete: function() {
-//             send({ type: "info", data: "Finished enumerating classes and initialising hook" });
-//           }
-//         });
-//       } catch (err) {
-//         send({ type: "errorGeneric", data: "Java.perform error" });
-//         console.error(err);
-//       }
-//     });
-//     /* if a Java/Dalvik/ART VM is not available */
-//   } else {
-//     send({ type: "errorGeneric", data: "Java.available error" });
-//   }
-// }
-
 function startEnumerateClasses() {
-  /* Check if a Java/Dalvik/ART VM is available */
   if (Java.available) {
     Java.perform(function(){
       try{
         Java.enumerateLoadedClasses({
-          onMatch: function(classNameToHook) {
-            send({ type: "enumerateClasses", data: classNameToHook });
+          onMatch: function(class_discovered) {
+            send({ type: "class_discovered", data: class_discovered });
           },
-          /* enumerateLoadedClasses finished */
           onComplete: function() {
-            send({ type: "enumerateClassesDone", data: " Finished enumerating classes" });
           }
         });
       } catch (err) {
@@ -73,14 +38,14 @@ function startEnumerateClasses() {
         console.error(err);
       }
     });
-    /* if a Java/Dalvik/ART VM is not available */
   } else {
     send({ type: "errorGeneric", data: "Java.available error" });
   }
 }
 
 function startProvidedClassesHook(providedClasss){
-  Java.perform(function(){
+  //TODO performNow or perform?
+  Java.performNow(function(){
       providedClasss.map(function(classNameToHook){
         hookClass(classNameToHook);
     });
@@ -91,48 +56,55 @@ function startProvidedClassesHook(providedClasss){
 /******CLASS HOOK FUNCTION******/
 
 function hookClass(classNameToHook){
-  var shouldHookClass = true;
-  excludeClassNames.map(function(filter){
-    if (classNameToHook.indexOf(filter) >= 0) {
-      shouldHookClass = false;
+
+  try {
+    classHandle = Java.use(classNameToHook);
+  } catch (err) {
+    send({ type: "errorGeneric", data: "Java.use error in class: " +
+      classNameToHook + " - skipping class" });
+    console.error(err);
+    return;
+  }
+
+  /*HOOK CONSTRUCTORS*/
+  try {
+    if (classHandle.$init.overloads.length > 0) {
+      hookConstructors(classNameToHook);
+    } else {
+      send({ type: "info", data: "No constructor to hook in class: " + classNameToHook });
     }
-  });
-  if ((classNameToHook.indexOf(filterClassNames) >= 0) && shouldHookClass){
-    try {
-      classHandle = Java.use(classNameToHook);
-    } catch (err) {
-      send({ type: "errorGeneric", data: "Java.use error in class: " +
-        classNameToHook + " - skipping class" });
-      console.error(err);
+  } catch (err) {
+    console.error(err);
+  }
+
+  /*HOOK FUNCTIONS*/
+  var allPropertyNames = getAllPropertyNames(classHandle);
+  var allFunctionNames = getAllFunctionNames(allPropertyNames);
+
+  allFunctionNames.map(function(methodNameToHook){
+    /*return if method name matches user exlcude regex*/
+    if(method_exclude_set && method_exclude.test(methodNameToHook)){
       return;
     }
-
-    var allPropertyNames = getAllPropertyNames(classHandle);
-    var allFunctionNames = getAllFunctionNames(allPropertyNames);
-
-    allFunctionNames.map(function(methodNameToHook){
-      if (excludeMethodNames.indexOf(methodNameToHook) > -1){
-        return;
-      }
-      try {
-        var catchFail = (classHandle.$init.overloads.length > 1);
-        hookConstructors(classNameToHook);
+    /*perform hook if method name matches user filter regex*/
+    if(method_filter.test(methodNameToHook)){
+      try{
+        if (!(classHandle[methodNameToHook].overloads.length > 1)){
+          hookMethod(classNameToHook, methodNameToHook);
+        } else {
+          hookOverloadedMethod(classNameToHook, methodNameToHook);
+        }
       } catch (err) {
-        send({ type: "info", data: "No constructor to hook in class: " + classNameToHook });
         console.error(err);
       }
-      if (!(classHandle[methodNameToHook].overloads.length > 1)){
-        hookMethod(classNameToHook, methodNameToHook);
-      } else {
-        hookOverloadedMethod(classNameToHook, methodNameToHook);
-      }
-    });
   }
+  });
 }
 
 
-/******METHOD AND CONSTRUCTOR HOOK FUNCTIONS******/
-
+/*
+METHOD AND CONSTRUCTOR HOOK FUNCTIONS
+*/
 function hookConstructors(classNameToHook){
   var constructorMethods = classHandle.$init.overloads;
   for (var i in constructorMethods){
@@ -156,7 +128,9 @@ function hookConstructors(classNameToHook){
           data: {
             methodType: "CONSTRUCTOR",
             className: classNameToHook,
-            args: JSON.stringify(args)
+            // args: JSON.stringify(args)
+            argTypes: argTypes,
+            args: args + ""
           }
         });
 
@@ -184,6 +158,7 @@ function hookMethod(classNameToHook, methodNameToHook){
 
     classHandle[methodNameToHook].implementation = function() {
       var args = Array.prototype.slice.call(arguments);
+      var retVal = this[methodNameToHook].apply(this, args);
       // send message on hook
       send({
         type: "methodCalled",
@@ -191,11 +166,14 @@ function hookMethod(classNameToHook, methodNameToHook){
           methodType: "METHOD",
           className: classNameToHook,
           methodName: methodNameToHook,
-          args: JSON.stringify(args)
+          argTypes: argTypes,
+          // args: JSON.stringify(args)
+          args: args + "",
+          ret: retVal + ""
         }
       });
 
-      return this[methodNameToHook].apply(this, args);
+      return retVal;
     };
   }catch (err){
     send({
@@ -228,7 +206,9 @@ function hookOverloadedMethod(classNameToHook, methodNameToHook){
       });
 
       classHandle[methodNameToHook].overload.apply(this, argTypes).implementation = function() {
+
         var args = Array.prototype.slice.call(arguments);
+        var retVal = this[methodNameToHook].apply(this, args);
         // send message on hook
         send({
           type: "methodCalled",
@@ -236,11 +216,16 @@ function hookOverloadedMethod(classNameToHook, methodNameToHook){
             methodType: "OVERLOADED METHOD",
             className: classNameToHook,
             methodName: methodNameToHook,
-            args: JSON.stringify(args)
+            // argTypes: argTypes,
+            // args: JSON.stringify(args)
+            args: args + "",
+            ret: retVal + ""
+
           }
         });
 
-        return this[methodNameToHook].apply(this, args);
+        // return this[methodNameToHook].apply(this, args);
+        return retVal;
       };
     } catch (err){
       send({
@@ -257,9 +242,13 @@ function hookOverloadedMethod(classNameToHook, methodNameToHook){
   }
 }
 
-/******CUSTOM FUNCTIONS******/
 
-/* return all the property names for an object by walking up the prototype chain
+/*
+CUSTOM FUNCTIONS
+*/
+
+/*
+return all the property names for an object by walking up the prototype chain
 enum/nonenum, self/inherited..
 */
 function getAllPropertyNames( obj ) {
@@ -273,6 +262,7 @@ function getAllPropertyNames( obj ) {
 }
 
 /*cheap hack to only get the function names of the intended class*/
+//TODO do it better I guess
 function getAllFunctionNames( propertyNames ) {
   var begin_pos = propertyNames.indexOf("$className");
   var end_pos = propertyNames.indexOf("constructor", begin_pos);
