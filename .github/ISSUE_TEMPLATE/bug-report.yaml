@@ -52,28 +52,41 @@ body:
     validations:
       required: true
   - type: textarea
-    id: repro
+    id: repro-steps
     attributes:
       label: Reproduction steps
       description: How do you trigger this bug? Please walk us through it step by step.
       value: |
-        1.
-        2.
-        3.
+        1. Go to '...'
+        2. Click on '...'
+        3. Scroll down to '...'
         ...
       render: bash
     validations:
       required: true
   - type: textarea
-    id: code
+    id: reproduce
     attributes:
-      label: Code to reproduce
-      description: Please copy and paste (or link) any relevant code needed to reproduce this issue.
+      label: Supporting info to reproduce
+      description: Please add any relevant code, screenshots and info needed to reproduce this issue.
   - type: textarea
     id: logs
     attributes:
       label: Relevant log output
       description: Please copy and paste any relevant log output. This will be automatically formatted into code, so no need for backticks.
+      render: shell
+  - type: textarea
+    id: flutter-analyze
+    attributes:
+      label: Flutter analyze output
+      description: Run `flutter analyze` and attach any output of that command below.
+      placeholder: If there are any analysis errors, try resolving them before filing this issue.
+      render: shell
+  - type: textarea
+    id: flutter-doctor
+    attributes:
+      label: Flutter doctor output
+      description: Paste the output of running `flutter doctor -v` here.
       render: shell
   - type: checkboxes
     id: terms
