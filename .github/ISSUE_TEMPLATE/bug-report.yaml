@@ -37,12 +37,12 @@ body:
     validations:
       required: true
   - type: textarea
-    id: versions
+    id: version
     attributes:
-      label: What version are you using
-      description: Please specify the version and the package name
-      placeholder: {package} {version}
-      render: bash
+      label: What version are you using?
+      description: Please specify the package
+      placeholder: package - version
+      value: "A bug happened!"
     validations:
       required: true
   - type: textarea
