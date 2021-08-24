@@ -50,7 +50,7 @@ body:
     attributes:
       label: "Describe alternatives that you have considered"
       description: "A clear description of any alternative solutions or features you've considered."
-      placeholder: "Example: Instead of this it should do tha.t"
+      placeholder: "Example: Instead of this it should do that."
   - type: textarea
     id: additional
     attributes:
@@ -62,5 +62,5 @@ body:
       label: Code of Conduct
       description: By submitting this issue, you agree to follow our [Code of Conduct](https://github.com/GetStream/stream-chat-flutter/blob/develop/CODE_OF_CONDUCT.md)
       options:
-        - label: I agree to follow this project's Code of Conduct
+        - label: "I agree to follow this project's Code of Conduct"
           required: true
