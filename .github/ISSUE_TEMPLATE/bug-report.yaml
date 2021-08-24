@@ -1,9 +1,8 @@
 name: Bug Report
-description: File a bug report
+description: Create a report to help us improve
 title: "[Bug]: "
-labels: [bug, triage]
+labels: [bug]
 assignees:
-  - octocat
 body:
   - type: markdown
     attributes:
@@ -36,6 +35,33 @@ body:
         - 1.0.3 (Edge)
     validations:
       required: true
+  - type: checkboxes
+    id: packages
+    attributes:
+      label: Which packages are you using?
+      description: You may select more than one.
+      options:
+        - label: stream_chat
+        - label: stream_chat_flutter
+        - lable: stream_chat_flutter_core
+        - lable: stream_chat_persistance
+        - lable: stream_chat_localizations
+    validations:
+      required: true
+  - type: checkboxes
+    id: platforms
+    attributes:
+      label: On what platform did you experience the issue?
+      description: You may select more than one.
+      options:
+        - label: iOS
+        - label: Android
+        - lable: Web
+        - lable: Windows
+        - lable: MacOS
+        - lable: Linux
+    validations:
+      required: true
   - type: dropdown
     id: browsers
     attributes:
@@ -46,6 +72,19 @@ body:
         - Chrome
         - Safari
         - Microsoft Edge
+  - type: textarea
+    id: repro
+    attributes:
+      label: Reproduction steps
+      description: "How do you trigger this bug? Please walk us through it step by step."
+      value: |
+        1.
+        2.
+        3.
+        ...
+      render: bash
+    validations:
+      required: true
   - type: textarea
     id: logs
     attributes:
