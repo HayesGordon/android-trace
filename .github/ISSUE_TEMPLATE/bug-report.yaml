@@ -23,7 +23,7 @@ body:
   - type: dropdown
     id: platforms
     attributes:
-      label: Which packages are you using?
+      label: What platforms did you experience the issue?
       description: You may select more than one.
       multiple: true
       options:
@@ -39,9 +39,8 @@ body:
     id: version
     attributes:
       label: What version are you using?
-      description: Please specify the package
+      description: Please specify the package-name and version
       placeholder: package - version
-      value: "A bug happened!"
     validations:
       required: true
   - type: textarea
@@ -49,8 +48,7 @@ body:
     attributes:
       label: What happened?
       description: Also tell us, what did you expect to happen?
-      placeholder: Tell us what you see!
-      value: "A bug happened!"
+      placeholder: Description of the bug and what was expected
     validations:
       required: true
   - type: textarea
@@ -66,6 +64,11 @@ body:
       render: bash
     validations:
       required: true
+  - type: textarea
+    id: code
+    attributes:
+      label: Code to reproduce
+      description: Please copy and paste (or link) any relevant code needed to reproduce this issue.
   - type: textarea
     id: logs
     attributes:
