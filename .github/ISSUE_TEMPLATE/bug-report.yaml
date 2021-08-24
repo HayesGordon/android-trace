@@ -43,9 +43,9 @@ body:
       options:
         - label: stream_chat
         - label: stream_chat_flutter
-        - lable: stream_chat_flutter_core
-        - lable: stream_chat_persistance
-        - lable: stream_chat_localizations
+        - label: stream_chat_flutter_core
+        - label: stream_chat_persistance
+        - label: stream_chat_localizations
     validations:
       required: true
   - type: checkboxes
@@ -56,10 +56,10 @@ body:
       options:
         - label: iOS
         - label: Android
-        - lable: Web
-        - lable: Windows
-        - lable: MacOS
-        - lable: Linux
+        - label: Web
+        - label: Windows
+        - label: MacOS
+        - label: Linux
     validations:
       required: true
   - type: dropdown
